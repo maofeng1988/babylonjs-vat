@@ -1,0 +1,54 @@
+{
+    "name": "babylon-vat",
+    "version": "0.0.1",
+    "description": "Vertex Animation Texture for BabylonJS",
+    "main": "index.ts",
+    "dependencies": {
+        "@babylonjs/core": "5.0.0-alpha.45",
+        "@babylonjs/inspector": "5.0.0-alpha.45",
+        "@babylonjs/loaders": "5.0.0-alpha.45",
+        "@babylonjs/materials": "5.0.0-alpha.45"
+    },
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^2.30.0",
+        "@typescript-eslint/parser": "^2.30.0",
+        "clean-webpack-plugin": "^3.0.0",
+        "eslint": "^7.32.0",
+        "file-loader": "^6.2.0",
+        "html-webpack-plugin": "^4.5.2",
+        "source-map-loader": "^2.0.2",
+        "ts-loader": "^8.3.0",
+        "typescript": "^4.4.4",
+        "url-loader": "^4.1.1",
+        "webpack": "^5.53.0",
+        "webpack-cli": "^4.8.0",
+        "webpack-dev-server": "^4.2.1",
+        "webpack-merge": "^5.8.0"
+    },
+    "scripts": {
+        "start": "npx webpack serve --config webpack.dev.js",
+        "build": "npx webpack --config webpack.prod.js",
+        "lint": "npx eslint . --ext .ts,.tsx"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/RaananW/babylonjs-webpack-es6.git"
+    },
+    "keywords": [
+        "Babylon.js",
+        "webpack",
+        "getting started",
+        "typescript",
+        "es6"
+    ],
+    "author": {
+        "name": "Raanan Weber",
+        "email": "info@raananweber.com",
+        "url": "http://blog.raananweber.com/"
+    },
+    "license": "Apache-2.0",
+    "bugs": {
+        "url": "https://github.com/RaananW/babylonjs-webpack-es6/issues"
+    },
+    "homepage": "https://github.com/RaananW/babylonjs-webpack-es6"
+}
