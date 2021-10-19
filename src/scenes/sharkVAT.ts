@@ -61,16 +61,15 @@ export class SharkVAT implements CreateSceneClass {
 
         const importResult = await SceneLoader.ImportMeshAsync(
             "",
-            "https://raw.githubusercontent.com/RaggarDK/Baby/baby/",
-            "arr.babylon",
+            "/",
+            "shark.glb",
             scene,
             undefined
         );
 
         console.log(importResult);
 
-        const sharkMesh = importResult.meshes[0] as Mesh;
-        sharkMesh.scaling = new Vector3(10, 10, 10);
+        const sharkMesh = importResult.meshes[1] as Mesh;
         const oldMaterial = sharkMesh.material as StandardMaterial;
 
         console.log(sharkMesh, importResult.skeletons[0], [
