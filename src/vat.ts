@@ -5,7 +5,6 @@ import {
     RawTexture,
     Scene,
     Skeleton,
-    TargetedAnimation,
     Texture,
     Vector4,
 } from "@babylonjs/core";
@@ -74,16 +73,16 @@ class VAT {
      * scene starts, so the VAT is generated and associated to the mesh.
      * @returns Promise
      */
-    public BakeVertexData(): Promise<void> {
-        const animationLengths = this.animationGroups.map(
-            (ag: AnimationGroup) =>
-                ag.targetedAnimations.map(
-                    (a: TargetedAnimation) => a.animation.getKeys().length
-                )[0]
-        );
+    public bakeVertexData(): Promise<void> {
+        // const animationLengths = this.animationGroups.map(
+        //     (ag: AnimationGroup) =>
+        //         ag.targetedAnimations.map(
+        //             (a: TargetedAnimation) => a.animation.getKeys().length
+        //         )[0]
+        // );
 
         // allocate our texture
-        this.frameCount = 53;
+        this.frameCount = 100;
         // animationLengths.reduce((previous, current) => previous + current);
         this.boneCount = this.skeleton.bones.length;
         this.vertexData = new Float32Array(
@@ -98,10 +97,9 @@ class VAT {
             this._executeAnimationFrame(() => {
                 // at this point we have the vertex data, so convert it to an actual texture
                 // and build a material
+                this.scene.stopAnimation(this.mesh);
                 this.mesh.skeleton?.returnToRest();
-                this.BuildTexture();
-                this.BuildMaterial();
-                this.ApplyBakedVertexDataToMesh();
+                this.rebuild();
                 resolve();
             });
         });
@@ -109,25 +107,37 @@ class VAT {
         return promise;
     }
     /**
+     * Rebuilds textures and materials, and applies it to the mesh.
+     * @returns Self.
+     */
+    public rebuild(): VAT {
+        this._buildTexture();
+        this._buildMaterial();
+        this._applyBakedVertexDataToMesh();
+        this.vertexData = null;
+        return this;
+    }
+    /**
      * Runs an animation frame and stores its vertex data
      * @param callback
      */
     private _executeAnimationFrame(callback: Function): void {
         this.scene.beginAnimation(
-            this.skeleton,
+            this.mesh.skeleton,
             this._frameIndex,
             this._frameIndex,
             false,
             1.0,
             () => {
                 this.scene.render();
-                if (!this.mesh.skeleton) {
-                    return;
+                if (!this.mesh.skeleton || !this.vertexData) {
+                    throw new Error("No skeleton.");
                 }
+
+                // generate matrices
                 const skeletonMatrices =
                     this.mesh.skeleton.getTransformMatrices(this.mesh);
-                console.log(this._textureIndex, skeletonMatrices);
-                this.vertexData?.set(
+                this.vertexData.set(
                     skeletonMatrices,
                     this._textureIndex * skeletonMatrices.length
                 );
@@ -144,8 +154,13 @@ class VAT {
             }
         );
     }
-
-    public SerializeBakedObject(): Record<string, any> {
+    /**
+     * Serializes our vertexData to an object, with a nice string for the vertexData.
+     * Should be called right after bakeVertexData(), since we release the vertexData
+     * from memory on rebuild().
+     * @returns Object
+     */
+    public serializeBakedObject(): Record<string, any> {
         if (!this.vertexData) {
             throw new Error("No vertex data");
         }
@@ -159,8 +174,11 @@ class VAT {
         };
         return data;
     }
-
-    public LoadBakedObject(data: Record<string, any>): VAT {
+    /**
+     * Loads previously baked data.
+     * @returns self
+     */
+    public loadBakedObject(data: Record<string, any>): VAT {
         this.vertexData = new Float32Array(
             new Uint8Array(
                 [...Buffer.from(data.vertexData, "base64")].map((c) =>
@@ -170,19 +188,27 @@ class VAT {
         );
         return this;
     }
-
-    public SerializeBakedJSON(): string {
-        return JSON.stringify(this.SerializeBakedObject());
+    /**
+     * Serializes our vertexData to a JSON string, with a nice string for the vertexData.
+     * Should be called right after bakeVertexData(), since we release the vertexData
+     * from memory on rebuild().
+     * @returns string
+     */
+    public serializeBakedJSON(): string {
+        return JSON.stringify(this.serializeBakedObject());
     }
-
-    public LoadBakedJSON(json: string): VAT {
-        return this.LoadBakedJSON(JSON.parse(json));
+    /**
+     * Loads previously baked data.
+     * @returns self
+     */
+    public loadBakedJSON(json: string): VAT {
+        return this.loadBakedJSON(JSON.parse(json));
     }
     /**
      * Builds the texture from an existing vertexData.
      * @return self
      */
-    public BuildTexture(): VAT {
+    public _buildTexture(): VAT {
         if (!this.vertexData) {
             throw new Error("No vertex data");
         }
@@ -202,29 +228,43 @@ class VAT {
     /**
      *
      */
-    public ApplyBakedVertexDataToMesh(): void {
+    public _applyBakedVertexDataToMesh(): void {
+        if (!this.material) {
+            throw new Error("No material");
+        }
         // build the material and assign it to the mesh
         this.mesh.registerInstancedBuffer("VATanimation", 4);
-        this.mesh.instancedBuffers.VATanimation = new Vector4(0, 0, 0, 30);
-        console.log(this.material, this.mesh.material);
-        // mat.diffuseTexture = this.mesh.material?.diffuseTexture;
+        this.mesh.instancedBuffers.VATanimation = new Vector4(
+            0, // start
+            this.frameCount - 1, // end frame
+            0, // offset
+            30.0 // speed in frames per second
+        );
         this.mesh.material = this.material;
     }
+
+    public updateTime(time: number): void {
+        this.material?.getEffect().setFloat("time", time);
+    }
+
     /**
      * Builds a material for the animation.
      * @returns The material
      */
-    public BuildMaterial(): CustomMaterial {
-        let time = 0;
+    public _buildMaterial(): CustomMaterial {
         const mat = new CustomMaterial(this.name, this.scene);
         mat.AddUniform("singleFrameUVPer", "float", 1 / this.frameCount);
         mat.AddUniform("boneSampler1", "sampler2D", this.boneTexture);
         mat.AddUniform("time", "float", 0.0);
         mat.AddAttribute("VATanimation");
 
-        // mat.diffuseTexture = this.mesh.material?.diffuseTexture;
+        // some temporary material colors just to show things are working
         mat.specularColor = new Color3(0.0, 0.0, 0.0);
         mat.ambientColor = new Color3(0.05, 0.1, 0.15);
+        // if we have a diffuse texture, reapply it
+        if (this.mesh.material && "diffuseTexture" in this.mesh.material) {
+            mat.diffuseTexture = (this.mesh.material as any).diffuseTexture;
+        }
 
         // sample from the texture
         mat.Vertex_Definitions(
@@ -247,20 +287,25 @@ mat4 readMatrixFromRawSampler1(sampler2D smp, float index, float frame, float bT
 
         mat.Vertex_MainBegin(
             `
+float VATStartFrame = VATanimation.x;
+float VATEndFrame = VATanimation.y;
+float VATOffsetFrame = VATanimation.z;
+float VATSpeed = VATanimation.w;
+
 // get number of frames
-float _numOfFrames = VATanimation.y - VATanimation.x;
+float _numOfFrames = VATEndFrame - VATStartFrame + 1.0;
 // convert frame offset to secs elapsed
-float offsetCycle = VATanimation.z / VATanimation.w;
+float offsetCycle = VATOffsetFrame / VATSpeed;
 // add offset to time to get actual time, then
 // compute time elapsed in terms of frame cycle (30 fps/180 frames = 1/6 of an animation cycle per second)
 // so 0.5s = 0.08333 of an animation cycle, 7.5s = 1.25 of an animation cycle etc
-float frameNum = fract((time+ offsetCycle) * VATanimation.w / _numOfFrames);
+float frameNum = fract((time + offsetCycle) * VATSpeed / _numOfFrames);
 // convert to actual frame
 frameNum *= _numOfFrames;
 // round it to integer
 frameNum = ceil(frameNum);
 // add to start frame
-frameNum += VATanimation.x;
+frameNum += VATStartFrame;
 `
         );
 
@@ -278,12 +323,10 @@ worldPos = finalWorld * vec4(positionUpdated, 1.0);
         );
 
         mat.onBindObservable.add(() => {
-            time += 0.01; // TODO
-            const e = mat.getEffect();
-            e.setFloat("singleFrameUVPer", 1 / this.frameCount);
-            e.setTexture("boneSampler1", this.boneTexture);
-            e.setFloat("time", time);
-            this.mesh.instancedBuffers.VATanimation.r += time;
+            // TODO: this should run only once
+            mat.getEffect()
+                .setFloat("singleFrameUVPer", 1 / this.frameCount)
+                .setTexture("boneSampler1", this.boneTexture);
         });
 
         this.material = mat;

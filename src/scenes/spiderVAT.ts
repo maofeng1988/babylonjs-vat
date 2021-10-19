@@ -56,14 +56,7 @@ export class SpiderVAT implements CreateSceneClass {
         // Default intensity is 1. Let's dim the light a small amount
         light.intensity = 0.7;
 
-        // const importResult = await SceneLoader.ImportMeshAsync(
-        //     "",
-        //     "/",
-        //     "shark.glb",
-        //     scene,
-        //     undefined
-        // );
-
+        // load our model
         const importResult = await SceneLoader.ImportMeshAsync(
             "",
             "https://raw.githubusercontent.com/RaggarDK/Baby/baby/",
@@ -72,39 +65,43 @@ export class SpiderVAT implements CreateSceneClass {
             undefined
         );
 
-        console.log(importResult);
-
-        const mesh = importResult.meshes[0] as Mesh;
-        const oldMaterial = mesh.material as StandardMaterial;
+        // create a VAT for it
         const vat = new VAT(
             "VATspider",
             scene,
-            mesh,
+            importResult.meshes[0] as Mesh,
             importResult.skeletons[0],
             []
         );
-        (window as any).vat = vat;
-        vat.BakeVertexData().then(() => {
-            console.log(vat);
 
-            // for (let i = 0; i < 20; i++) {
-            //     const instance = vat.mesh.createInstance("shark" + i);
-            //     instance.position.y += i;
-            //     instance.instancedBuffers.VAT = new Vector4(
-            //         0, // start
-            //         50, // end
-            //         0, // offset
-            //         1.0 //
-            //     );
-            // }
+        // bake VAT.
+        vat.bakeVertexData().then(() => {
+            vat.mesh.setEnabled(false);
+            // create instances
+            for (let i = 0; i < 20; i++) {
+                const instance = vat.mesh.createInstance("spider" + i);
+                instance.position.x += (i - 10.0) * 2;
+
+                // set our animation parameters.
+                instance.instancedBuffers.VATanimation = new Vector4(
+                    0, // start
+                    100, // end
+                    i * 2, // offset
+                    30.0 // speed in frames per second
+                );
+            }
+
+            // Register a render loop to repeatedly render the scene
+            const startTime = new Date().getTime();
+            engine.runRenderLoop(() => {
+                const endTime = new Date().getTime();
+                const timeElapsed = (endTime - startTime) / 1000.0; // in s
+                vat.updateTime(timeElapsed);
+                scene.render();
+            });
         });
 
         scene.debugLayer.show();
-
-        // Register a render loop to repeatedly render the scene
-        engine.runRenderLoop(() => {
-            scene.render();
-        });
 
         return scene;
     };
