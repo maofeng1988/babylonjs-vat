@@ -1,7 +1,8 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
+import { Color3, Mesh, StandardMaterial } from "@babylonjs/core";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Vector3, Vector4 } from "@babylonjs/core/Maths/math.vector";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { CreateSceneClass } from "../createScene";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
@@ -13,9 +14,8 @@ import "@babylonjs/loaders/glTF";
 import "@babylonjs/core/Materials/standardMaterial";
 import "@babylonjs/core/Materials/Textures/Loaders/envTextureLoader";
 import VAT from "../vat";
-import { BaseTexture, Color3, Mesh, StandardMaterial } from "@babylonjs/core";
 
-export class BasicVAT implements CreateSceneClass {
+export class SharkVAT implements CreateSceneClass {
     createScene = async (
         engine: Engine,
         canvas: HTMLCanvasElement
@@ -51,31 +51,54 @@ export class BasicVAT implements CreateSceneClass {
         // Default intensity is 1. Let's dim the light a small amount
         light.intensity = 0.7;
 
+        // const importResult = await SceneLoader.ImportMeshAsync(
+        //     "",
+        //     "/",
+        //     "shark.glb",
+        //     scene,
+        //     undefined
+        // );
+
         const importResult = await SceneLoader.ImportMeshAsync(
             "",
-            "/",
-            "shark.glb",
+            "https://raw.githubusercontent.com/RaggarDK/Baby/baby/",
+            "arr.babylon",
             scene,
             undefined
         );
+
         console.log(importResult);
 
-        const vat = new VAT("VATshark", scene, importResult.meshes[1] as Mesh, importResult.skeletons[0], [importResult.animationGroups[0]]);
+        const sharkMesh = importResult.meshes[0] as Mesh;
+        sharkMesh.scaling = new Vector3(10, 10, 10);
+        const oldMaterial = sharkMesh.material as StandardMaterial;
+
+        console.log(sharkMesh, importResult.skeletons[0], [
+            importResult.animationGroups[0],
+        ]);
+        const vat = new VAT(
+            "VATshark",
+            scene,
+            sharkMesh,
+            importResult.skeletons[0],
+            [importResult.animationGroups[0]]
+        );
         scene.stopAllAnimations();
-        vat.BakeVertexData().
-            then(() => {
-                const oldMaterial = importResult.meshes[1].material as StandardMaterial;
-                const newMaterial = vat.material;
-                if (!newMaterial) {
-                    throw new Error("impossible");
-                }
-                newMaterial.diffuseTexture = oldMaterial.diffuseTexture;
-                newMaterial.specularColor = new Color3(0.0, 0.0, 0.0);
-                newMaterial.ambientColor = new Color3(0.05, 0.1, 0.15);
+        (window as any).vat = vat;
+        vat.BakeVertexData().then(() => {
+            console.log(vat);
 
-                importResult.meshes[1].material = newMaterial;
-            });
-
+            // for (let i = 0; i < 20; i++) {
+            //     const instance = vat.mesh.createInstance("shark" + i);
+            //     instance.position.y += i;
+            //     instance.instancedBuffers.VAT = new Vector4(
+            //         0, // start
+            //         50, // end
+            //         0, // offset
+            //         1.0 //
+            //     );
+            // }
+        });
 
         scene.debugLayer.show();
 
@@ -83,4 +106,4 @@ export class BasicVAT implements CreateSceneClass {
     };
 }
 
-export default new BasicVAT();
+export default new SharkVAT();
