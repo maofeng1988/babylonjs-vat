@@ -32,6 +32,9 @@ class VAT {
     /** a material applying the VAT */
     material: CustomMaterial | null;
 
+    /** current animationGroup index in animationGroups */
+    _animGroupIndex = 0;
+
     /** total number of frames in our animations */
     frameCount = 0;
 
@@ -43,6 +46,9 @@ class VAT {
 
     /** Current index for the texture in the baking process (linear counter) */
     _textureIndex = 0;
+
+    /** test param */
+    _frames = 46;
 
     /**
      *
@@ -80,17 +86,17 @@ class VAT {
         //             (a: TargetedAnimation) => a.animation.getKeys().length
         //         )[0]
         // );
-
+        this.frameCount = Math.round(this.animationGroups[0].to - this.animationGroups[0].from + 1);
         // allocate our texture
-        this.frameCount = 100;
         // animationLengths.reduce((previous, current) => previous + current);
         this.boneCount = this.skeleton.bones.length;
         this.vertexData = new Float32Array(
-            (this.boneCount + 1) * 4 * 4 * this.frameCount
+          (this.boneCount + 1) * 4 * 4 * this.frameCount * Math.max(this.animationGroups.length, 1)
+            // (this.boneCount + 1) * 4 * 4 * this.frameCount * this.animationGroups.length
         );
 
         const promise = new Promise<void>((resolve, reject) => {
-            this._frameIndex = 7;
+            this._frameIndex = 0;
             this._textureIndex = 0;
             this.scene.stopAnimation(this.mesh);
             this.scene.render();
@@ -114,45 +120,138 @@ class VAT {
         this._buildTexture();
         this._buildMaterial();
         this._applyBakedVertexDataToMesh();
-        this.vertexData = null;
+        // this.vertexData = null;
         return this;
     }
     /**
      * Runs an animation frame and stores its vertex data
      * @param callback
      */
-    private _executeAnimationFrame(callback: Function): void {
-        this.scene.beginAnimation(
-            this.mesh.skeleton,
-            this._frameIndex,
-            this._frameIndex,
-            false,
-            1.0,
-            () => {
-                this.scene.render();
-                if (!this.mesh.skeleton || !this.vertexData) {
-                    throw new Error("No skeleton.");
-                }
+    private async _executeAnimationFrame(callback: Function): Promise<void> {
+        // this.scene.beginAnimation(
+        //     this.mesh.skeleton,
+        //     this._frameIndex,
+        //     this._frameIndex,
+        //     false,
+        //     1.0,
+        //     () => {
+        //         this.scene.render();
+        //         // if (!this.mesh.skeleton || !this.vertexData) {
+        //         //     throw new Error("No skeleton.");
+        //         // }
 
-                // generate matrices
-                const skeletonMatrices =
-                    this.mesh.skeleton.getTransformMatrices(this.mesh);
-                this.vertexData.set(
-                    skeletonMatrices,
-                    this._textureIndex * skeletonMatrices.length
-                );
+        //         // generate matrices
+        //         // const skeletonMatrices =
+        //         //     this.mesh.skeleton.getTransformMatrices(this.mesh);
+        //         // this.vertexData.set(
+        //         //     skeletonMatrices,
+        //         //     // this._textureIndex * skeletonMatrices.length
+        //         //     this._textureIndex * skeletonMatrices.length + this.frameCount * skeletonMatrices.length * this._animGroupIndex
+        //         // );
 
-                // TODO: frameIndex should match the animation ranges, there might be skips
-                this._frameIndex++;
-                this._textureIndex++;
+        //         // TODO: frameIndex should match the animation ranges, there might be skips
+        //         // this._frameIndex++;
+        //         // this._textureIndex++;
 
-                if (this._textureIndex < this.frameCount) {
-                    this._executeAnimationFrame(callback);
-                } else {
-                    callback();
+        //         this._frameIndex++;
+        //         this._textureIndex++;
+
+        //         if (this._textureIndex < this.frameCount) {
+        //             this._executeAnimationFrame(callback);
+        //         } else {
+
+        //         //   if(this._animGroupIndex < this.animationGroups.length - 1) {
+        //         //     this._animGroupIndex += 1;
+        //         //     this.frameCount = this._frames;
+        //         //     this._frameIndex = 0;
+        //         //     this._textureIndex = 0;
+        //         //     // this.scene.stopAnimation(this.mesh);
+        //         //     this.animationGroups.forEach((animGroup: AnimationGroup) => {
+        //         //         animGroup.pause();
+        //         //     })
+        //         //     if(!this.animationGroups[this._animGroupIndex].isPlaying) {
+        //         //       // this.mesh.skeleton?.returnToRest();
+        //         //       this.animationGroups[this._animGroupIndex].play();
+        //         //     }
+        //         //     this.animationGroups[this._animGroupIndex].play();
+        //         //     this._executeAnimationFrame(callback);
+        //         //     //--------------------------------------------------------------------------------------???????
+        //         //   } else {
+        //         //     console.log('--1212--', this.vertexData);
+        //         //     // this.animationGroups.forEach((animG: AnimationGroup) => {
+        //         //     //   animG.stop();
+        //         //     // })
+        //         //     // this.scene.stopAnimation(this.mesh);
+        //         //     this.scene.animationGroups.forEach((animG: AnimationGroup) => {
+        //         //       animG.pause();
+        //         //     })
+        //         //     // this.animationGroups[this._animGroupIndex].play(true);
+        //         //     callback();
+        //         //   }
+        //           // console.log('--1212--', this.vertexData);
+        //           this._frameIndex = 0;
+        //           this._textureIndex = 0;
+        //           callback();
+        //         }
+        //     }
+        // );
+        try {
+            if(this.animationGroups[0]) {
+                const frameCount = Math.round(this.animationGroups[0].to - this.animationGroups[0].from + 1);
+                console.log('frameCount: ', frameCount);
+                this._frames = frameCount + 1;
+                const testFunc = function() {
+                    return new Promise((resolve) => {
+                        setTimeout(function(){
+                           console.log("testAwait", Date.now());
+                           resolve(null);
+                        }, 30);
+                    });
+                 }
+                 
+                for(let i = 0; i< frameCount; i++) {
+                    this.scene.render();
+                    this.animationGroups[0].play();
+                    this.animationGroups[0].goToFrame(i);
+                    this.animationGroups[0].stop();
+                    
+                    if (!this.mesh.skeleton || !this.vertexData) {
+                        throw new Error("No skeleton.");
+                    }
+                    await testFunc()
+                    // generate matrices
+                    const skeletonMatrices =
+                        this.mesh.skeleton.getTransformMatrices(this.mesh);
+                    this.vertexData.set(
+                        skeletonMatrices,
+                        this._textureIndex * skeletonMatrices.length + this.frameCount * skeletonMatrices.length * this._animGroupIndex
+                    );
+    
+                    this._frameIndex++;
+                    this._textureIndex++;
+                    
+                    if (this._textureIndex >= frameCount) {
+                        console.log(this.vertexData);
+                        this._frameIndex = 0;
+                        this._textureIndex = 0;
+                        // callback();
+                    }
                 }
             }
-        );
+            this.scene.beginAnimation(
+                this.mesh.skeleton,
+                0,
+                0,
+                false,
+                1.0,
+                () => {
+                    callback();
+                }
+            );
+        } catch (error) {
+           console.log(this.frameCount, this._frameIndex) 
+        }
+        
     }
     /**
      * Serializes our vertexData to an object, with a nice string for the vertexData.
@@ -215,13 +314,15 @@ class VAT {
         this.boneTexture = RawTexture.CreateRGBATexture(
             this.vertexData,
             (this.boneCount + 1) * 4,
-            this.frameCount,
+            // this.frameCount,
+            this.frameCount * Math.max(this.animationGroups.length, 1),
             this.scene,
             false,
             false,
             Texture.NEAREST_NEAREST,
             1
         );
+        console.log('boneTexture: ', this.boneTexture);
         this.boneTexture.name = this.name + "texture";
         return this;
     }
@@ -236,7 +337,7 @@ class VAT {
         this.mesh.registerInstancedBuffer("VATanimation", 4);
         this.mesh.instancedBuffers.VATanimation = new Vector4(
             0, // start
-            this.frameCount - 1, // end frame
+            45, // end frame
             0, // offset
             30.0 // speed in frames per second
         );
@@ -253,7 +354,8 @@ class VAT {
      */
     public _buildMaterial(): CustomMaterial {
         const mat = new CustomMaterial(this.name, this.scene);
-        mat.AddUniform("singleFrameUVPer", "float", 1 / this.frameCount);
+        // mat.AddUniform("singleFrameUVPer", "float", 1 / this.frameCount);
+        mat.AddUniform("singleFrameUVPer", "float", 1 / (this.frameCount * Math.max(this.animationGroups.length, 1)));
         mat.AddUniform("boneSampler1", "sampler2D", this.boneTexture);
         mat.AddUniform("time", "float", 0.0);
         mat.AddAttribute("VATanimation");
@@ -268,64 +370,65 @@ class VAT {
 
         // sample from the texture
         mat.Vertex_Definitions(
-            `
-attribute vec4 VATanimation;
+            /*glsl*/`
+              attribute vec4 VATanimation;
 
-mat4 readMatrixFromRawSampler1(sampler2D smp, float index, float frame, float bTW)
-{
-    float offset = index * 4.0;
-    float dx = 1.0 / bTW;
-    float frameUV = frame*singleFrameUVPer;
-    vec4 m0 = texture2D(smp, vec2(dx * (offset + 0.5), frameUV));
-    vec4 m1 = texture2D(smp, vec2(dx * (offset + 1.5), frameUV));
-    vec4 m2 = texture2D(smp, vec2(dx * (offset + 2.5), frameUV));
-    vec4 m3 = texture2D(smp, vec2(dx * (offset + 3.5), frameUV));
-    return mat4(m0, m1, m2, m3);
-}
-  `
+              mat4 readMatrixFromRawSampler1(sampler2D smp, float index, float frame, float bTW)
+              {
+                  float offset = index * 4.0;
+                  float dx = 1.0 / bTW;
+                  float frameUV = frame*singleFrameUVPer;
+                  vec4 m0 = texture2D(smp, vec2(dx * (offset + 0.5), frameUV));
+                  vec4 m1 = texture2D(smp, vec2(dx * (offset + 1.5), frameUV));
+                  vec4 m2 = texture2D(smp, vec2(dx * (offset + 2.5), frameUV));
+                  vec4 m3 = texture2D(smp, vec2(dx * (offset + 3.5), frameUV));
+                  return mat4(m0, m1, m2, m3);
+              }
+              `
         );
 
         mat.Vertex_MainBegin(
-            `
-float VATStartFrame = VATanimation.x;
-float VATEndFrame = VATanimation.y;
-float VATOffsetFrame = VATanimation.z;
-float VATSpeed = VATanimation.w;
+            /*glsl*/`
+              float VATStartFrame = VATanimation.x;
+              float VATEndFrame = VATanimation.y;
+              float VATOffsetFrame = VATanimation.z;
+              float VATSpeed = VATanimation.w;
 
-// get number of frames
-float _numOfFrames = VATEndFrame - VATStartFrame + 1.0;
-// convert frame offset to secs elapsed
-float offsetCycle = VATOffsetFrame / VATSpeed;
-// add offset to time to get actual time, then
-// compute time elapsed in terms of frame cycle (30 fps/180 frames = 1/6 of an animation cycle per second)
-// so 0.5s = 0.08333 of an animation cycle, 7.5s = 1.25 of an animation cycle etc
-float frameNum = fract((time + offsetCycle) * VATSpeed / _numOfFrames);
-// convert to actual frame
-frameNum *= _numOfFrames;
-// round it to integer
-frameNum = ceil(frameNum);
-// add to start frame
-frameNum += VATStartFrame;
-`
+              // get number of frames
+              float _numOfFrames = VATEndFrame - VATStartFrame + 1.0;
+              // convert frame offset to secs elapsed
+              float offsetCycle = VATOffsetFrame / VATSpeed;
+              // add offset to time to get actual time, then
+              // compute time elapsed in terms of frame cycle (30 fps/180 frames = 1/6 of an animation cycle per second)
+              // so 0.5s = 0.08333 of an animation cycle, 7.5s = 1.25 of an animation cycle etc
+              float frameNum = fract( (time + offsetCycle) * VATSpeed / _numOfFrames );
+              // convert to actual frame
+              frameNum *= _numOfFrames;
+              // round it to integer
+              frameNum = ceil(frameNum);
+              // add to start frame
+              frameNum += VATStartFrame;
+            `
         );
 
         // apply position
         mat.Vertex_After_WorldPosComputed(
+            /*glsl*/`
+              mat4 influence1;
+              influence1 = readMatrixFromRawSampler1(boneSampler1, matricesIndices[0], frameNum, boneTextureWidth) * matricesWeights[0];
+              influence1 += readMatrixFromRawSampler1(boneSampler1, matricesIndices[1], frameNum, boneTextureWidth) * matricesWeights[1];
+              influence1 += readMatrixFromRawSampler1(boneSampler1, matricesIndices[2], frameNum, boneTextureWidth) * matricesWeights[2];
+              influence1 += readMatrixFromRawSampler1(boneSampler1, matricesIndices[3], frameNum, boneTextureWidth) * matricesWeights[3];
+              finalWorld = finalWorld * influence1;
+              worldPos = finalWorld * vec4(positionUpdated, 1.0);
             `
-mat4 influence1;
-influence1 = readMatrixFromRawSampler1(boneSampler1, matricesIndices[0], frameNum, boneTextureWidth) * matricesWeights[0];
-influence1 += readMatrixFromRawSampler1(boneSampler1, matricesIndices[1], frameNum, boneTextureWidth) * matricesWeights[1];
-influence1 += readMatrixFromRawSampler1(boneSampler1, matricesIndices[2], frameNum, boneTextureWidth) * matricesWeights[2];
-influence1 += readMatrixFromRawSampler1(boneSampler1, matricesIndices[3], frameNum, boneTextureWidth) * matricesWeights[3];
-finalWorld = finalWorld * influence1;
-worldPos = finalWorld * vec4(positionUpdated, 1.0);
-`
         );
 
         mat.onBindObservable.add(() => {
             // TODO: this should run only once
             mat.getEffect()
-                .setFloat("singleFrameUVPer", 1 / this.frameCount)
+                .setFloat("singleFrameUVPer", 1 / (this.frameCount * Math.max(this.animationGroups.length, 1)))
+                // .setFloat("singleFrameUVPer", 1 / this.frameCount)
                 .setTexture("boneSampler1", this.boneTexture);
         });
 

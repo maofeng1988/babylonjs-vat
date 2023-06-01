@@ -1,6 +1,6 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
-import { Color3, Mesh, StandardMaterial } from "@babylonjs/core";
+import { Color3, Mesh, StandardMaterial, Texture, AnimationGroup } from "@babylonjs/core";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Vector3, Vector4 } from "@babylonjs/core/Maths/math.vector";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
@@ -15,7 +15,7 @@ import "@babylonjs/core/Materials/standardMaterial";
 import "@babylonjs/core/Materials/Textures/Loaders/envTextureLoader";
 import VAT from "../vat";
 
-export class SharkVAT implements CreateSceneClass {
+export class LivaVAT implements CreateSceneClass {
     createScene = async (
         engine: Engine,
         canvas: HTMLCanvasElement
@@ -54,29 +54,50 @@ export class SharkVAT implements CreateSceneClass {
         const importResult = await SceneLoader.ImportMeshAsync(
             "",
             "/",
-            "shark.glb",
+            "NPC_Scene.glb",
             scene,
             undefined
         );
-        const sharkMesh = importResult.meshes[1] as Mesh;
+        const npcMesh = importResult.meshes[1] as Mesh;
+        (npcMesh.material as StandardMaterial).diffuseTexture = new Texture('./NPC_1.jpg', scene);
         const vat = new VAT(
-            "VATshark",
+            "VATliva",
             scene,
-            sharkMesh,
+            npcMesh,
             importResult.skeletons[0],
-            [importResult.animationGroups[0], importResult.animationGroups[1], importResult.animationGroups[2]]
+            // importResult.animationGroups
+            [
+            //   importResult.animationGroups[0], 
+            //   importResult.animationGroups[1], 
+              importResult.animationGroups[2],
+            //   importResult.animationGroups[3]
+            ]
         );
+        importResult.animationGroups.forEach((animG: AnimationGroup) => {
+            animG.pause();
+        })
+        // importResult.animationGroups[2].animatables.forEach(anim => {
+        //     anim.frameRa
+        // })
+        // importResult.animationGroups[2].normalize(0, 100);
+        // importResult.animationGroups[2].play(true);
+        // importResult.animationGroups[1].start();
+        // importResult.animationGroups[1].goToFrame(24);
+        // importResult.animationGroups[1].pause();
         vat.bakeVertexData().then(() => {
             // create instances
             for (let i = 0; i < 20; i++) {
-                const instance = vat.mesh.createInstance("shark" + i);
+                const instance = vat.mesh.createInstance("liva" + i);
                 instance.position.x += (i - 10.0) * 2;
-                instance.parent = sharkMesh.parent;
+//重要重要重要
+//-------********--------------源mesh的父级根节点scaling.x是-1，导致instance不能合批绘制，放在同一父物体下解决该问题 ---------------------
+                instance.parent = npcMesh.parent; 
 
                 // set our animation parameters.
                 instance.instancedBuffers.VATanimation = new Vector4(
                     0, // start
-                    100, // end
+                    vat._frames - 1, // end
+                    // 0,
                     i * 2, // offset
                     30.0 // speed in frames per second
                 );
@@ -90,6 +111,7 @@ export class SharkVAT implements CreateSceneClass {
                 vat.updateTime(timeElapsed);
                 scene.render();
             });
+            npcMesh.isVisible = false;
         });
 
         scene.debugLayer.show();
@@ -98,4 +120,4 @@ export class SharkVAT implements CreateSceneClass {
     };
 }
 
-export default new SharkVAT();
+export default new LivaVAT();
