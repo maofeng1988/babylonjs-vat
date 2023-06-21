@@ -13,7 +13,7 @@ import "@babylonjs/core/Loading/loadingScreen";
 import "@babylonjs/loaders/glTF";
 import "@babylonjs/core/Materials/standardMaterial";
 import "@babylonjs/core/Materials/Textures/Loaders/envTextureLoader";
-import VAT from "../vat";
+import VAT from "../vat_v2";
 
 export class LivaVAT implements CreateSceneClass {
     createScene = async (
@@ -67,10 +67,10 @@ export class LivaVAT implements CreateSceneClass {
             importResult.skeletons[0],
             // importResult.animationGroups
             [
-            //   importResult.animationGroups[0], 
-            //   importResult.animationGroups[1], 
+              importResult.animationGroups[0], 
+              importResult.animationGroups[1], 
               importResult.animationGroups[2],
-            //   importResult.animationGroups[3]
+              importResult.animationGroups[3]
             ]
         );
         importResult.animationGroups.forEach((animG: AnimationGroup) => {

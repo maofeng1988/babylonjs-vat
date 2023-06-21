@@ -7,6 +7,8 @@ import {
     Skeleton,
     Texture,
     Vector4,
+    BakedVertexAnimationManager,
+    VertexAnimationBaker
 } from "@babylonjs/core";
 import { CustomMaterial } from "@babylonjs/materials";
 
@@ -50,6 +52,15 @@ class VAT {
     /** test param */
     _frames = 46;
 
+    /** animation ranges */
+    _animationRanges = [
+      {
+        name: '',
+        from: 0,
+        to: 0,
+      }
+    ];
+
     /**
      *
      * @param name Defines the name of the VAT
@@ -73,6 +84,16 @@ class VAT {
         this.animationGroups = animationGroups;
         this.boneTexture = null;
         this.material = null;
+        let framenum = 0;
+        animationGroups.forEach((ani: AnimationGroup, index: number) => {
+          this._animationRanges[index] = {
+            name: ani.name,
+            from: framenum,
+            to: Math.round(framenum + (ani.to - ani.from))
+          }
+          framenum += Math.round(ani.to - ani.from + 1);
+        })
+        console.log(this._animationRanges);
     }
     /**
      * Bakes the animation into the texture. This should be called once, when the
@@ -80,18 +101,14 @@ class VAT {
      * @returns Promise
      */
     public bakeVertexData(): Promise<void> {
-        // const animationLengths = this.animationGroups.map(
-        //     (ag: AnimationGroup) =>
-        //         ag.targetedAnimations.map(
-        //             (a: TargetedAnimation) => a.animation.getKeys().length
-        //         )[0]
-        // );
-        this.frameCount = Math.round(this.animationGroups[0].to - this.animationGroups[0].from + 1);
-        // allocate our texture
-        // animationLengths.reduce((previous, current) => previous + current);
+        // this.frameCount = Math.round(this.animationGroups[0].to - this.animationGroups[0].from + 1);
+        let frameCounts = 0;
+        this.animationGroups.forEach((ani) => {
+          frameCounts += Math.round(ani.to - ani.from + 1);
+        })
         this.boneCount = this.skeleton.bones.length;
         this.vertexData = new Float32Array(
-          (this.boneCount + 1) * 4 * 4 * this.frameCount * Math.max(this.animationGroups.length, 1)
+          (this.boneCount + 1) * 4 * 4 * frameCounts
             // (this.boneCount + 1) * 4 * 4 * this.frameCount * this.animationGroups.length
         );
 
@@ -128,116 +145,60 @@ class VAT {
      * @param callback
      */
     private async _executeAnimationFrame(callback: Function): Promise<void> {
-        // this.scene.beginAnimation(
-        //     this.mesh.skeleton,
-        //     this._frameIndex,
-        //     this._frameIndex,
-        //     false,
-        //     1.0,
-        //     () => {
-        //         this.scene.render();
-        //         // if (!this.mesh.skeleton || !this.vertexData) {
-        //         //     throw new Error("No skeleton.");
-        //         // }
-
-        //         // generate matrices
-        //         // const skeletonMatrices =
-        //         //     this.mesh.skeleton.getTransformMatrices(this.mesh);
-        //         // this.vertexData.set(
-        //         //     skeletonMatrices,
-        //         //     // this._textureIndex * skeletonMatrices.length
-        //         //     this._textureIndex * skeletonMatrices.length + this.frameCount * skeletonMatrices.length * this._animGroupIndex
-        //         // );
-
-        //         // TODO: frameIndex should match the animation ranges, there might be skips
-        //         // this._frameIndex++;
-        //         // this._textureIndex++;
-
-        //         this._frameIndex++;
-        //         this._textureIndex++;
-
-        //         if (this._textureIndex < this.frameCount) {
-        //             this._executeAnimationFrame(callback);
-        //         } else {
-
-        //         //   if(this._animGroupIndex < this.animationGroups.length - 1) {
-        //         //     this._animGroupIndex += 1;
-        //         //     this.frameCount = this._frames;
-        //         //     this._frameIndex = 0;
-        //         //     this._textureIndex = 0;
-        //         //     // this.scene.stopAnimation(this.mesh);
-        //         //     this.animationGroups.forEach((animGroup: AnimationGroup) => {
-        //         //         animGroup.pause();
-        //         //     })
-        //         //     if(!this.animationGroups[this._animGroupIndex].isPlaying) {
-        //         //       // this.mesh.skeleton?.returnToRest();
-        //         //       this.animationGroups[this._animGroupIndex].play();
-        //         //     }
-        //         //     this.animationGroups[this._animGroupIndex].play();
-        //         //     this._executeAnimationFrame(callback);
-        //         //     //--------------------------------------------------------------------------------------???????
-        //         //   } else {
-        //         //     console.log('--1212--', this.vertexData);
-        //         //     // this.animationGroups.forEach((animG: AnimationGroup) => {
-        //         //     //   animG.stop();
-        //         //     // })
-        //         //     // this.scene.stopAnimation(this.mesh);
-        //         //     this.scene.animationGroups.forEach((animG: AnimationGroup) => {
-        //         //       animG.pause();
-        //         //     })
-        //         //     // this.animationGroups[this._animGroupIndex].play(true);
-        //         //     callback();
-        //         //   }
-        //           // console.log('--1212--', this.vertexData);
-        //           this._frameIndex = 0;
-        //           this._textureIndex = 0;
-        //           callback();
-        //         }
-        //     }
-        // );
         try {
-            if(this.animationGroups[2]) {
-                const frameCount = Math.round(this.animationGroups[0].to - this.animationGroups[0].from + 1);
-                console.log('frameCount: ', frameCount);
-                this._frames = frameCount + 1;
-                const testFunc = function() {
-                    return new Promise((resolve) => {
-                        setTimeout(function(){
-                           console.log("testAwait", Date.now());
-                           resolve(null);
-                        }, 30);
-                    });
-                 }
-                 
-                for(let i = 0; i< frameCount; i++) {
-                    this.scene.render();
-                    this.animationGroups[0].play();
-                    this.animationGroups[0].goToFrame(i);
-                    this.animationGroups[0].stop();
-                    
-                    if (!this.mesh.skeleton || !this.vertexData) {
-                        throw new Error("No skeleton.");
-                    }
-                    await testFunc()
-                    // generate matrices
-                    const skeletonMatrices =
-                        this.mesh.skeleton.getTransformMatrices(this.mesh);
-                    this.vertexData.set(
-                        skeletonMatrices,
-                        this._textureIndex * skeletonMatrices.length + this.frameCount * skeletonMatrices.length * this._animGroupIndex
-                    );
-    
-                    this._frameIndex++;
-                    this._textureIndex++;
-                    
-                    if (this._textureIndex >= frameCount) {
-                        console.log(this.vertexData);
-                        this._frameIndex = 0;
-                        this._textureIndex = 0;
-                        // callback();
-                    }
-                }
+          for(let j = 0; j < this.animationGroups.length; j++) {
+            this._animGroupIndex = j;
+            let frameCountBase = 0;
+            for(let k = 0; k < j; k++) {
+              frameCountBase += (this.animationGroups[k].to - this.animationGroups[k].from + 1);
             }
+            if(this.animationGroups[j]) {
+              const frameCount = Math.round(this.animationGroups[j].to - this.animationGroups[j].from + 1);
+              console.log('frameCount: ', frameCount);
+              this._frames = frameCount + 1;
+              const testFunc = function() {
+                  return new Promise((resolve) => {
+                      setTimeout(function(){
+                         console.log("testAwait", Date.now());
+                         resolve(null);
+                      }, 30);
+                  });
+               }
+               
+              for(let i = 0; i< frameCount; i++) {
+                  this.scene.render();
+                  this.animationGroups[j].play();
+                  this.animationGroups[j].goToFrame(i);
+                  this.animationGroups[j].stop();
+                  
+                  if (!this.mesh.skeleton || !this.vertexData) {
+                      throw new Error("No skeleton.");
+                  }
+                  await testFunc()
+                  // generate matrices
+                  const skeletonMatrices =
+                      this.mesh.skeleton.getTransformMatrices(this.mesh);
+                  
+                  this.vertexData.set(
+                      skeletonMatrices,
+                      this._textureIndex * skeletonMatrices.length + frameCountBase * skeletonMatrices.length
+                  );
+  
+                  this._frameIndex++;
+                  this._textureIndex++;
+                  
+                  if (this._textureIndex >= frameCount) {
+                    console.log(this.vertexData);
+                    this._frameIndex = 0;
+                    this._textureIndex = 0;
+                    // callback();
+                  }
+              }
+              // this._frameIndex = 0;
+              // this._textureIndex = 0;
+            }
+          }
+          console.log(this.vertexData?.length);
             this.scene.beginAnimation(
                 this.mesh.skeleton,
                 0,
@@ -246,6 +207,38 @@ class VAT {
                 1.0,
                 () => {
                     callback();
+                    const baker = new VertexAnimationBaker(this.scene, this.mesh);
+                    if(!this.vertexData) {
+                      return;
+                    }
+                    // const vertexTexture = baker.textureFromBakedVertexData(this.vertexData);
+                    // const manager = new BakedVertexAnimationManager(this.scene);
+
+                    // manager.texture = vertexTexture;
+                    // manager.animationParameters = new Vector4(
+                    //   this.animationGroups[0].from,
+                    //   this.animationGroups[0].to,
+                    //   0, 
+                    //   30
+                    // );
+                    // this.mesh.bakedVertexAnimationManager = manager;
+                    // manager.setAnimationParameters(this.animationGroups[0].from, this.animationGroups[0].to,
+                    //   0, 60);
+                    // this.scene.registerBeforeRender(() => {
+                    //   manager.time += this.scene.getEngine().getDeltaTime() / 1000.0;
+                    // });
+                    // we got the vertex data. let's serialize it:
+
+                    // const vertexDataJSON = baker.serializeBakedVertexDataToJSON(this.vertexData);
+                    const vertexDataJSON = baker.serializeBakedVertexDataToJSON(this.vertexData);
+                    // const vertexDataJSON = this.serializeBakedJSON();
+                    // console.log('vertexDataJson: ', vertexDataJSON);
+                    // and save it to a local JSON file
+                    const a = document.createElement('a');
+                    console.log('vertexDataJSON: ', vertexDataJSON)
+                    a.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(vertexDataJSON));
+                    a.setAttribute("download", "vertexData.json");
+                    a.click();
                 }
             );
         } catch (error) {

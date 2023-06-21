@@ -29,8 +29,8 @@
         "webpack-merge": "^5.8.0"
     },
     "scripts": {
-        "start": "SET NODE_OPTIONS=--openssl-legacy-provider && npx webpack serve --config webpack.dev.js",
-        "build": "SET NODE_OPTIONS=--openssl-legacy-provider && npx webpack --config webpack.prod.js",
+        "start": "npx webpack serve --config webpack.dev.js",
+        "build": "npx webpack --config webpack.prod.js",
         "lint": "npx eslint . --ext .ts,.tsx"
     },
     "repository": {

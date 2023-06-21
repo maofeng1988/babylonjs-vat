@@ -18,7 +18,7 @@ import "@babylonjs/core/Loading/loadingScreen";
 import "@babylonjs/loaders/glTF";
 import "@babylonjs/core/Materials/standardMaterial";
 import "@babylonjs/core/Materials/Textures/Loaders/envTextureLoader";
-import VAT from "../vat";
+import VAT from "../vat_v2";
 
 export class SpiderVAT implements CreateSceneClass {
     createScene = async (
