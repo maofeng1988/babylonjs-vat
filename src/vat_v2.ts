@@ -150,7 +150,7 @@ class VAT {
             this._animGroupIndex = j;
             let frameCountBase = 0;
             for(let k = 0; k < j; k++) {
-              frameCountBase += (this.animationGroups[k].to - this.animationGroups[k].from + 1);
+              frameCountBase += Math.round(this.animationGroups[k].to - this.animationGroups[k].from + 1);
             }
             if(this.animationGroups[j]) {
               const frameCount = Math.round(this.animationGroups[j].to - this.animationGroups[j].from + 1);
@@ -230,10 +230,12 @@ class VAT {
                     // we got the vertex data. let's serialize it:
 
                     // const vertexDataJSON = baker.serializeBakedVertexDataToJSON(this.vertexData);
+                    console.log(this.vertexData);
                     const vertexDataJSON = baker.serializeBakedVertexDataToJSON(this.vertexData);
                     // const vertexDataJSON = this.serializeBakedJSON();
                     // console.log('vertexDataJson: ', vertexDataJSON);
                     // and save it to a local JSON file
+
                     const a = document.createElement('a');
                     console.log('vertexDataJSON: ', vertexDataJSON)
                     a.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(vertexDataJSON));
